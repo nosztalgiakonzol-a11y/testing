@@ -7,12 +7,14 @@ from playwright.sync_api import sync_playwright
 from supabase import create_client
 
 TARGET_URL = os.getenv("TARGET_URL", "https://www.sportfogadas.org:2096/irodak/most")
+BOABET_URL = os.getenv("BOABET_URL", "https://boabet.com/hu")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "600"))
 MAX_LOAD_SECONDS = int(os.getenv("MAX_LOAD_SECONDS", "120"))
 NAVIGATION_RETRIES = int(os.getenv("NAVIGATION_RETRIES", "2"))
 BOOKMAKER = os.getenv("BOOKMAKER", "mostbet").lower()
+BOABET_BOOKMAKER = os.getenv("BOABET_BOOKMAKER", "boabet").lower()
 HEADLESS = os.getenv("HEADLESS", "false").lower() == "true"
 BLOCK_RESOURCES = os.getenv("BLOCK_RESOURCES", "true").lower() == "true"
 VEGAS_BOOKMAKER = os.getenv("VEGAS_BOOKMAKER", "vegas").lower()
@@ -58,14 +60,14 @@ def get_final_domain(browser, url: str) -> str:
     return urlparse(final_url).netloc if final_url else ""
 
 
-def update_replace_pattern(supabase, domain: str) -> None:
+def update_replace_pattern(supabase, bookmaker: str, domain: str) -> None:
     payload = {
         "replace_pattern": domain,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     supabase.table("link_formatter_rules").update(payload).eq(
         "bookmaker",
-        BOOKMAKER,
+        bookmaker,
     ).execute()
 
 
@@ -132,11 +134,26 @@ def main() -> None:
                     f"[{datetime.now(timezone.utc).isoformat()}] Nem sikerült domain-t kinyerni."
                 )
             elif "sportfogadas.org" not in domain:
-                update_replace_pattern(supabase, domain)
+                update_replace_pattern(supabase, BOOKMAKER, domain)
                 print(f"[{datetime.now(timezone.utc).isoformat()}] Frissítve: {domain}")
             else:
                 print(
                     f"[{datetime.now(timezone.utc).isoformat()}] Még sportfogadas.org: {domain}"
+                )
+
+            boabet_domain = get_final_domain(browser, BOABET_URL)
+            if not boabet_domain:
+                print(
+                    f"[{datetime.now(timezone.utc).isoformat()}] Nem sikerült boabet domain-t kinyerni."
+                )
+            elif "boabet.com" not in boabet_domain:
+                update_replace_pattern(supabase, BOABET_BOOKMAKER, boabet_domain)
+                print(
+                    f"[{datetime.now(timezone.utc).isoformat()}] Boabet frissítve: {boabet_domain}"
+                )
+            else:
+                print(
+                    f"[{datetime.now(timezone.utc).isoformat()}] Még boabet.com: {boabet_domain}"
                 )
 
             if VEGAS_CHECK_ENABLED:
