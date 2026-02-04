@@ -10,18 +10,32 @@ TARGET_URL = os.getenv("TARGET_URL", "https://www.sportfogadas.org:2096/irodak/m
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "600"))
+MAX_LOAD_SECONDS = int(os.getenv("MAX_LOAD_SECONDS", "120"))
+NAVIGATION_RETRIES = int(os.getenv("NAVIGATION_RETRIES", "2"))
 BOOKMAKER = os.getenv("BOOKMAKER", "mostbet").lower()
 
 
 def get_final_domain(url: str) -> str:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url, wait_until="domcontentloaded")
-        page.wait_for_timeout(1500)
-        final_url = page.url
+        context = browser.new_context()
+        page = context.new_page()
+        final_url = ""
+        for attempt in range(1, NAVIGATION_RETRIES + 1):
+            try:
+                page.goto(
+                    url,
+                    wait_until="domcontentloaded",
+                    timeout=MAX_LOAD_SECONDS * 1000,
+                )
+                page.wait_for_timeout(1500)
+                final_url = page.url
+                break
+            except Exception as exc:
+                print(f"Hiba a navigációban (próbálkozás {attempt}): {exc}")
+        context.close()
         browser.close()
-    return urlparse(final_url).netloc
+    return urlparse(final_url).netloc if final_url else ""
 
 
 def update_replace_pattern(supabase, domain: str) -> None:
@@ -43,7 +57,11 @@ def main() -> None:
 
     while True:
         domain = get_final_domain(TARGET_URL)
-        if domain and "sportfogadas.org" not in domain:
+        if not domain:
+            print(
+                f"[{datetime.now(timezone.utc).isoformat()}] Nem sikerült domain-t kinyerni."
+            )
+        elif "sportfogadas.org" not in domain:
             update_replace_pattern(supabase, domain)
             print(f"[{datetime.now(timezone.utc).isoformat()}] Frissítve: {domain}")
         else:
