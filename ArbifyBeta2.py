@@ -13,14 +13,22 @@ CHECK_INTERVAL_SECONDS = int(os.getenv("CHECK_INTERVAL_SECONDS", "600"))
 MAX_LOAD_SECONDS = int(os.getenv("MAX_LOAD_SECONDS", "120"))
 NAVIGATION_RETRIES = int(os.getenv("NAVIGATION_RETRIES", "2"))
 BOOKMAKER = os.getenv("BOOKMAKER", "mostbet").lower()
+VEGAS_BOOKMAKER = os.getenv("VEGAS_BOOKMAKER", "vegas").lower()
+VEGAS_CHECK_ENABLED = os.getenv("VEGAS_CHECK_ENABLED", "true").lower() == "true"
+VEGAS_TEXT = os.getenv(
+    "VEGAS_TEXT",
+    "Ez az esemény lezárult. Kérjük, nézze meg a többi elérhető eseményt.",
+)
+VEGAS_POLL_LIMIT = int(os.getenv("VEGAS_POLL_LIMIT", "25"))
 
 
-def get_final_domain(url: str) -> str:
+def navigate_and_capture(url: str) -> tuple[str, str]:
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         context = browser.new_context()
         page = context.new_page()
         final_url = ""
+        content = ""
         for attempt in range(1, NAVIGATION_RETRIES + 1):
             try:
                 page.goto(
@@ -30,11 +38,17 @@ def get_final_domain(url: str) -> str:
                 )
                 page.wait_for_timeout(1500)
                 final_url = page.url
+                content = page.content()
                 break
             except Exception as exc:
                 print(f"Hiba a navigációban (próbálkozás {attempt}): {exc}")
         context.close()
         browser.close()
+    return final_url, content
+
+
+def get_final_domain(url: str) -> str:
+    final_url, _ = navigate_and_capture(url)
     return urlparse(final_url).netloc if final_url else ""
 
 
@@ -49,12 +63,60 @@ def update_replace_pattern(supabase, domain: str) -> None:
     ).execute()
 
 
+def fetch_new_vegas_tips(supabase, last_seen_id: int) -> tuple[int, list[dict]]:
+    query = (
+        supabase.table("tips")
+        .select("id, bookmaker1, bookmaker2, original_link1, original_link2")
+        .order("id")
+        .limit(VEGAS_POLL_LIMIT)
+    )
+    if last_seen_id > 0:
+        query = query.gt("id", last_seen_id)
+    response = query.execute()
+    tips = response.data or []
+    if tips:
+        last_seen_id = max(tip["id"] for tip in tips if "id" in tip)
+    return last_seen_id, tips
+
+
+def check_vegas_tip(page_url: str) -> None:
+    final_url, content = navigate_and_capture(page_url)
+    if not final_url:
+        print(f"[{datetime.now(timezone.utc).isoformat()}] Vegas link nem töltött be.")
+        return
+    if VEGAS_TEXT in content:
+        print(
+            f"[{datetime.now(timezone.utc).isoformat()}] Vegas lezárt esemény: {final_url}"
+        )
+    else:
+        print(
+            f"[{datetime.now(timezone.utc).isoformat()}] Vegas ellenőrzés OK: {final_url}"
+        )
+
+
+def process_vegas_tips(supabase, last_seen_id: int) -> int:
+    last_seen_id, tips = fetch_new_vegas_tips(supabase, last_seen_id)
+    if not tips:
+        return last_seen_id
+    for tip in tips:
+        if tip.get("bookmaker1", "").lower() == VEGAS_BOOKMAKER:
+            link = tip.get("original_link1")
+            if link:
+                check_vegas_tip(link)
+        if tip.get("bookmaker2", "").lower() == VEGAS_BOOKMAKER:
+            link = tip.get("original_link2")
+            if link:
+                check_vegas_tip(link)
+    return last_seen_id
+
+
 def main() -> None:
     if not SUPABASE_URL or not SUPABASE_KEY:
         raise RuntimeError("SUPABASE_URL és SUPABASE_KEY környezeti változók szükségesek.")
 
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+    last_seen_id = 0
     while True:
         domain = get_final_domain(TARGET_URL)
         if not domain:
@@ -68,6 +130,10 @@ def main() -> None:
             print(
                 f"[{datetime.now(timezone.utc).isoformat()}] Még sportfogadas.org: {domain}"
             )
+
+        if VEGAS_CHECK_ENABLED:
+            last_seen_id = process_vegas_tips(supabase, last_seen_id)
+
         time.sleep(CHECK_INTERVAL_SECONDS)
 
 
