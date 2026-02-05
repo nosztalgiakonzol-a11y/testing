@@ -14,6 +14,21 @@ This project demonstrates the use of undetected-chromedriver for web scraping an
 pip install -r requirements.txt
 ```
 
+## Configuration
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` and add your Supabase credentials:
+   ```
+   SUPABASE_URL=https://your-project.supabase.co
+   SUPABASE_KEY=your-service-role-key-here
+   ```
+
+Note: The code will fall back to default values if environment variables are not set, but it's recommended to use environment variables for security.
+
 ## Requirements
 
 - Python 3.7+
@@ -35,8 +50,10 @@ The script will:
 ## Configuration
 
 The code includes:
-- Headless Chrome configuration
-- Proper error handling and cleanup
+- Headless Chrome configuration for automation
+- Proper error handling and cleanup with try-finally blocks
+- Environment variable support for secure credential management
+- Explicit waits for reliable page load detection
 - Supabase authentication and data fetching
 
 ## Functions

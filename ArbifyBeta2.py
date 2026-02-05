@@ -4,6 +4,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from supabase import create_client
 import time
+import os
 
 def setup_undetected_driver():
     """Initialize and return an undetected Chrome driver"""
@@ -25,8 +26,9 @@ def fetch_data_with_selenium():
         url = "https://sonudgyyvxncdcganppl.supabase.co"
         driver.get(url)
         
-        # Wait for page to load
-        time.sleep(2)
+        # Wait for page to load using explicit wait
+        wait = WebDriverWait(driver, 10)
+        wait.until(lambda d: d.execute_script('return document.readyState') == 'complete')
         
         print(f"Successfully loaded page: {driver.title}")
         print(f"Current URL: {driver.current_url}")
@@ -41,8 +43,8 @@ def fetch_data_with_selenium():
 
 def fetch_data_from_supabase():
     """Fetch data from Supabase database"""
-    url = "https://sonudgyyvxncdcganppl.supabase.co"
-    key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbnVkZ3l5dnhuY2RjZ2FucHBsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDAzMDk0MywiZXhwIjoyMDc1NjA2OTQzfQ.6mmHZJ2QS3a4TywxZ-lswdcvwPCF5NCYLe6CuiO8-3A"
+    url = os.environ.get('SUPABASE_URL', 'https://sonudgyyvxncdcganppl.supabase.co')
+    key = os.environ.get('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbnVkZ3l5dnhuY2RjZ2FucHBsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDAzMDk0MywiZXhwIjoyMDc1NjA2OTQzfQ.6mmHZJ2QS3a4TywxZ-lswdcvwPCF5NCYLe6CuiO8-3A')
     
     supabase = create_client(url, key)
     response = supabase.table("tips").select("id, match_name, profit_percent").execute()
