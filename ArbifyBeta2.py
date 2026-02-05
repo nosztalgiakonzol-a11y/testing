@@ -39,6 +39,38 @@ def get_chrome_version():
     except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired):
         pass
     
+    try:
+        # Try to get Chrome version on Windows using registry
+        if os.name == 'nt':
+            import winreg
+            key_path = r'SOFTWARE\Google\Chrome\BLBeacon'
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_READ)
+            version, _ = winreg.QueryValueEx(key, 'version')
+            winreg.CloseKey(key)
+            version_match = re.search(r'(\d+)\.', version)
+            if version_match:
+                return int(version_match.group(1))
+    except Exception:
+        pass
+    
+    try:
+        # Try Windows Chrome via command line
+        if os.name == 'nt':
+            chrome_paths = [
+                r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+                r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+            ]
+            for chrome_path in chrome_paths:
+                if os.path.exists(chrome_path):
+                    result = subprocess.run([chrome_path, '--version'], 
+                                          capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        version_match = re.search(r'(\d+)\.', result.stdout)
+                        if version_match:
+                            return int(version_match.group(1))
+    except Exception:
+        pass
+    
     # Default to version 144 for Hungary where Chrome 145 is not yet available
     # This can be overridden via CHROME_VERSION environment variable
     default_version = int(os.environ.get('CHROME_VERSION', '144'))
@@ -83,12 +115,16 @@ def fetch_data_with_selenium():
         return False
     finally:
         if driver:
-            driver.quit()
+            try:
+                driver.quit()
+            except Exception:
+                # Suppress any errors during cleanup
+                pass
 
 def fetch_data_from_supabase():
     """Fetch data from Supabase database"""
     url = os.environ.get('SUPABASE_URL', 'https://sonudgyyvxncdcganppl.supabase.co')
-    key = os.environ.get('SUPABASE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbnVkZ3l5dnhuY2RjZ2FucHBsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDAzMDk0MywiZXhwIjoyMDc1NjA2OTQzfQ.6mmHZJ2QS3a4TywxZ-lswdcvwPCF5NCYLe6CuiO8-3A')
+    key = os.environ.get('SUPABASE_KEY', '******')
     
     supabase = create_client(url, key)
     response = supabase.table("tips").select("id, match_name, profit_percent").execute()

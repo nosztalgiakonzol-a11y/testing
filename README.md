@@ -40,6 +40,7 @@ Note: The code will fall back to default values if environment variables are not
 
 - Python 3.7+
 - Chrome/Chromium browser installed
+- Works on Linux and Windows
 
 ## Usage
 
@@ -68,6 +69,10 @@ The code includes:
 ## Chrome Version Handling
 
 The script automatically detects your installed Chrome version and downloads the matching ChromeDriver. This solves the common issue where ChromeDriver version 145 is used but Chrome version 144 is installed (common in Hungary and other regions where latest Chrome versions may not be immediately available).
+
+The detection works on both Linux and Windows:
+- **Linux**: Checks `google-chrome --version` or `chromium-browser --version`
+- **Windows**: Checks registry (`HKEY_CURRENT_USER\SOFTWARE\Google\Chrome\BLBeacon`) or Chrome executable paths
 
 If automatic detection fails, the script defaults to Chrome version 144 to ensure compatibility in regions where Chrome 145 is not yet available. You can override this default by setting the `CHROME_VERSION` environment variable.
 
