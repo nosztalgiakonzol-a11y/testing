@@ -79,7 +79,7 @@ def get_chrome_version():
 def setup_undetected_driver():
     """Initialize and return an undetected Chrome driver with proper version handling"""
     options = uc.ChromeOptions()
-    options.add_argument('--headless')
+    # Headless mode removed to show browser window
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     

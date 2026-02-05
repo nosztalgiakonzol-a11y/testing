@@ -8,7 +8,7 @@ This project demonstrates the use of undetected-chromedriver for web scraping an
 - **Automatic Chrome Version Detection**: Automatically detects installed Chrome version and uses matching ChromeDriver
 - **Chrome Version Compatibility**: Handles Chrome version mismatches (e.g., Chrome 144 in Hungary where 145 is not yet available)
 - **Supabase Integration**: Fetches data from Supabase database
-- **Headless Mode**: Runs Chrome in headless mode for automation
+- **Visible Browser**: Runs Chrome with visible window for debugging and monitoring
 
 ## Installation
 
@@ -59,7 +59,7 @@ The script will:
 ## Code Configuration
 
 The code includes:
-- Headless Chrome configuration for automation
+- Chrome configuration for automation with visible browser window
 - Automatic Chrome version detection to match ChromeDriver version
 - Proper error handling and cleanup with try-finally blocks
 - Environment variable support for secure credential management
@@ -85,7 +85,7 @@ If automatic detection fails, the script defaults to Chrome version 144 to ensur
 
 ## Notes
 
-- The driver runs in headless mode for better performance in automated environments
+- The driver runs with a visible browser window for debugging and monitoring
 - Proper cleanup is ensured with try-finally blocks
 - The code handles exceptions gracefully
 - Chrome version is automatically detected and matched with compatible ChromeDriver
