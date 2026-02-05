@@ -5,6 +5,8 @@ This project demonstrates the use of undetected-chromedriver for web scraping an
 ## Features
 
 - **Undetected Selenium Driver**: Uses undetected-chromedriver to bypass bot detection mechanisms
+- **Automatic Chrome Version Detection**: Automatically detects installed Chrome version and uses matching ChromeDriver
+- **Chrome Version Compatibility**: Handles Chrome version mismatches (e.g., Chrome 144 in Hungary where 145 is not yet available)
 - **Supabase Integration**: Fetches data from Supabase database
 - **Headless Mode**: Runs Chrome in headless mode for automation
 
@@ -43,22 +45,31 @@ python ArbifyBeta2.py
 ```
 
 The script will:
-1. Initialize an undetected Chrome driver
-2. Navigate to a specified URL
-3. Fetch data from Supabase database
+1. Automatically detect your Chrome version
+2. Initialize an undetected Chrome driver with matching ChromeDriver version
+3. Navigate to a specified URL
+4. Fetch data from Supabase database
 
-## Configuration
+## Code Configuration
 
 The code includes:
 - Headless Chrome configuration for automation
+- Automatic Chrome version detection to match ChromeDriver version
 - Proper error handling and cleanup with try-finally blocks
 - Environment variable support for secure credential management
 - Explicit waits for reliable page load detection
 - Supabase authentication and data fetching
 
+## Chrome Version Handling
+
+The script automatically detects your installed Chrome version and downloads the matching ChromeDriver. This solves the common issue where ChromeDriver version 145 is used but Chrome version 144 is installed (common in Hungary and other regions where latest Chrome versions may not be immediately available).
+
+If automatic detection fails, the script defaults to Chrome version 144 to ensure compatibility in regions where Chrome 145 is not yet available.
+
 ## Functions
 
-- `setup_undetected_driver()`: Initializes and configures the undetected Chrome driver
+- `get_chrome_version()`: Automatically detects the installed Chrome version
+- `setup_undetected_driver()`: Initializes and configures the undetected Chrome driver with version matching
 - `fetch_data_with_selenium()`: Demonstrates web navigation using undetected selenium
 - `fetch_data_from_supabase()`: Fetches data from Supabase database
 
@@ -67,3 +78,5 @@ The code includes:
 - The driver runs in headless mode for better performance in automated environments
 - Proper cleanup is ensured with try-finally blocks
 - The code handles exceptions gracefully
+- Chrome version is automatically detected and matched with compatible ChromeDriver
+- If Chrome version detection fails, defaults to version 144 (for Hungary and similar regions)

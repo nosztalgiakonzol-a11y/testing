@@ -5,15 +5,50 @@ from selenium.webdriver.support import expected_conditions as EC
 from supabase import create_client
 import time
 import os
+import subprocess
+import re
+
+def get_chrome_version():
+    """Detect the installed Chrome version"""
+    try:
+        # Try to get Chrome version on Linux
+        result = subprocess.run(['google-chrome', '--version'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            version_match = re.search(r'(\d+)\.', result.stdout)
+            if version_match:
+                return int(version_match.group(1))
+    except Exception:
+        pass
+    
+    try:
+        # Try alternative command
+        result = subprocess.run(['chromium-browser', '--version'], 
+                              capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            version_match = re.search(r'(\d+)\.', result.stdout)
+            if version_match:
+                return int(version_match.group(1))
+    except Exception:
+        pass
+    
+    # Default to version 144 for Hungary where Chrome 145 is not yet available
+    return 144
 
 def setup_undetected_driver():
-    """Initialize and return an undetected Chrome driver"""
+    """Initialize and return an undetected Chrome driver with proper version handling"""
     options = uc.ChromeOptions()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     
-    driver = uc.Chrome(options=options)
+    # Get the Chrome version to use the matching ChromeDriver
+    chrome_version = get_chrome_version()
+    print(f"Using Chrome version: {chrome_version}")
+    
+    # Create driver with specified Chrome version
+    # This ensures ChromeDriver matches the installed Chrome version
+    driver = uc.Chrome(options=options, version_main=chrome_version)
     return driver
 
 def fetch_data_with_selenium():
