@@ -126,11 +126,22 @@ def fetch_data_from_supabase():
     url = os.environ.get('SUPABASE_URL', 'https://sonudgyyvxncdcganppl.supabase.co')
     key = os.environ.get('SUPABASE_KEY', '******')
     
-    supabase = create_client(url, key)
-    response = supabase.table("tips").select("id, match_name, profit_percent").execute()
+    # Check if valid credentials are provided
+    if key == '******':
+        print("Warning: Supabase key not configured. Please set SUPABASE_KEY environment variable.")
+        print("Skipping Supabase data fetch.")
+        return None
     
-    print(f"Összes találat: {len(response.data)}")
-    return response.data
+    try:
+        supabase = create_client(url, key)
+        response = supabase.table("tips").select("id, match_name, profit_percent").execute()
+        
+        print(f"Összes találat: {len(response.data)}")
+        return response.data
+    except Exception as e:
+        print(f"Error fetching data from Supabase: {str(e)}")
+        print("Please check your SUPABASE_URL and SUPABASE_KEY environment variables.")
+        return None
 
 if __name__ == "__main__":
     print("=== Testing Undetected Selenium Driver ===")

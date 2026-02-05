@@ -34,7 +34,7 @@ pip install -r requirements.txt
    CHROME_VERSION=144
    ```
 
-Note: The code will fall back to default values if environment variables are not set, but it's recommended to use environment variables for security.
+**Important**: If you don't configure Supabase credentials, the script will skip the Supabase data fetch and only run the Selenium tests. This is useful for testing the browser automation without requiring a database connection.
 
 ## Requirements
 
