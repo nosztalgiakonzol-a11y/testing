@@ -18,7 +18,6 @@ BOABET_BOOKMAKER = os.getenv("BOABET_BOOKMAKER", "boabet").lower()
 HEADLESS = os.getenv("HEADLESS", "false").lower() == "true"
 BLOCK_RESOURCES = os.getenv("BLOCK_RESOURCES", "true").lower() == "true"
 VEGAS_BOOKMAKER = os.getenv("VEGAS_BOOKMAKER", "vegas").lower()
-RABONA_BOOKMAKER = os.getenv("RABONA_BOOKMAKER", "rabona").lower()
 VEGAS_CHECK_ENABLED = os.getenv("VEGAS_CHECK_ENABLED", "true").lower() == "true"
 VEGAS_TEXT = os.getenv(
     "VEGAS_TEXT",
@@ -103,28 +102,11 @@ def check_vegas_tip(browser, page_url: str) -> None:
         )
 
 
-def replicate_vegas_tip(supabase, tip: dict) -> None:
-    if "id" not in tip:
-        return
-    replicated = dict(tip)
-    replicated["id"] = f"{tip['id']}_Rabona"
-    if replicated.get("bookmaker1", "").lower() == VEGAS_BOOKMAKER:
-        replicated["bookmaker1"] = RABONA_BOOKMAKER
-    if replicated.get("bookmaker2", "").lower() == VEGAS_BOOKMAKER:
-        replicated["bookmaker2"] = RABONA_BOOKMAKER
-    supabase.table("tips").insert(replicated).execute()
-
-
 def process_vegas_tips(supabase, browser, last_seen_id: int) -> int:
     last_seen_id, tips = fetch_new_vegas_tips(supabase, last_seen_id)
     if not tips:
         return last_seen_id
     for tip in tips:
-        if (
-            tip.get("bookmaker1", "").lower() == VEGAS_BOOKMAKER
-            or tip.get("bookmaker2", "").lower() == VEGAS_BOOKMAKER
-        ):
-            replicate_vegas_tip(supabase, tip)
         if tip.get("bookmaker1", "").lower() == VEGAS_BOOKMAKER:
             link = tip.get("original_link1")
             if link:
