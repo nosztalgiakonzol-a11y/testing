@@ -9,7 +9,14 @@ import subprocess
 import re
 
 def get_chrome_version():
-    """Detect the installed Chrome version"""
+    """
+    Detect the installed Chrome version.
+    
+    Returns:
+        int: The major version number of installed Chrome (e.g., 144).
+             Defaults to 144 if detection fails (for regions like Hungary 
+             where Chrome 145 is not yet available).
+    """
     try:
         # Try to get Chrome version on Linux
         result = subprocess.run(['google-chrome', '--version'], 
@@ -18,7 +25,7 @@ def get_chrome_version():
             version_match = re.search(r'(\d+)\.', result.stdout)
             if version_match:
                 return int(version_match.group(1))
-    except Exception:
+    except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired):
         pass
     
     try:
@@ -29,11 +36,13 @@ def get_chrome_version():
             version_match = re.search(r'(\d+)\.', result.stdout)
             if version_match:
                 return int(version_match.group(1))
-    except Exception:
+    except (FileNotFoundError, subprocess.SubprocessError, subprocess.TimeoutExpired):
         pass
     
     # Default to version 144 for Hungary where Chrome 145 is not yet available
-    return 144
+    # This can be overridden via CHROME_VERSION environment variable
+    default_version = int(os.environ.get('CHROME_VERSION', '144'))
+    return default_version
 
 def setup_undetected_driver():
     """Initialize and return an undetected Chrome driver with proper version handling"""

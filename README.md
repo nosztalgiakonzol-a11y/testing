@@ -29,6 +29,11 @@ pip install -r requirements.txt
    SUPABASE_KEY=your-service-role-key-here
    ```
 
+3. (Optional) Override Chrome version if automatic detection fails:
+   ```
+   CHROME_VERSION=144
+   ```
+
 Note: The code will fall back to default values if environment variables are not set, but it's recommended to use environment variables for security.
 
 ## Requirements
@@ -64,7 +69,7 @@ The code includes:
 
 The script automatically detects your installed Chrome version and downloads the matching ChromeDriver. This solves the common issue where ChromeDriver version 145 is used but Chrome version 144 is installed (common in Hungary and other regions where latest Chrome versions may not be immediately available).
 
-If automatic detection fails, the script defaults to Chrome version 144 to ensure compatibility in regions where Chrome 145 is not yet available.
+If automatic detection fails, the script defaults to Chrome version 144 to ensure compatibility in regions where Chrome 145 is not yet available. You can override this default by setting the `CHROME_VERSION` environment variable.
 
 ## Functions
 
