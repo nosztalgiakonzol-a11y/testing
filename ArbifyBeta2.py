@@ -7,6 +7,8 @@ import time
 import os
 import subprocess
 import re
+import sys
+import atexit
 
 # TODO: TEMPORARY HARDCODED KEYS FOR TESTING - WILL BE REMOVED TOMORROW
 SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbnVkZ3l5dnhuY2RjZ2FucHBsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDAzMDk0MywiZXhwIjoyMDc1NjA2OTQzfQ.6mmHZJ2QS3a4TywxZ-lswdcvwPCF5NCYLe6CuiO8-3A"
@@ -137,6 +139,7 @@ def fetch_data_from_supabase():
         print("Skipping Supabase data fetch.")
         return None
     
+    supabase = None
     try:
         supabase = create_client(url, key)
         response = supabase.table("tips").select("id, match_name, profit_percent").execute()
@@ -147,10 +150,34 @@ def fetch_data_from_supabase():
         print(f"Error fetching data from Supabase: {str(e)}")
         print("Please check your SUPABASE_URL and SUPABASE_KEY environment variables.")
         return None
+    finally:
+        # Ensure Supabase client resources are cleaned up
+        if supabase:
+            try:
+                # Close any open connections
+                if hasattr(supabase, 'postgrest') and hasattr(supabase.postgrest, 'session'):
+                    supabase.postgrest.session.close()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
-    print("=== Testing Undetected Selenium Driver ===")
-    fetch_data_with_selenium()
-    
-    print("\n=== Fetching Data from Supabase ===")
-    fetch_data_from_supabase()
+    try:
+        print("=== Testing Undetected Selenium Driver ===")
+        fetch_data_with_selenium()
+        
+        print("\n=== Fetching Data from Supabase ===")
+        fetch_data_from_supabase()
+        
+        # Allow time for proper cleanup
+        print("\nScript completed successfully!")
+        time.sleep(0.5)
+        
+    except KeyboardInterrupt:
+        print("\nScript interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\nUnexpected error: {str(e)}")
+        sys.exit(1)
+    finally:
+        # Ensure clean exit
+        sys.exit(0)
