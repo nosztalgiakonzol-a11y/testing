@@ -83,11 +83,22 @@ def get_chrome_version():
     return default_version
 
 def setup_undetected_driver():
-    """Initialize and return an undetected Chrome driver with proper version handling"""
+    """Initialize and return an undetected Chrome driver with proper version handling and stability options"""
     options = uc.ChromeOptions()
     # Headless mode removed to show browser window
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
+    
+    # Additional stability options to prevent crashes
+    options.add_argument('--disable-gpu')
+    options.add_argument('--disable-software-rasterizer')
+    options.add_argument('--disable-extensions')
+    options.add_argument('--disable-popup-blocking')
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    
+    # Set page load strategy to prevent hanging
+    options.page_load_strategy = 'normal'
     
     # Get the Chrome version to use the matching ChromeDriver
     chrome_version = get_chrome_version()
@@ -96,6 +107,11 @@ def setup_undetected_driver():
     # Create driver with specified Chrome version
     # This ensures ChromeDriver matches the installed Chrome version
     driver = uc.Chrome(options=options, version_main=chrome_version)
+    
+    # Set timeouts to prevent hanging
+    driver.set_page_load_timeout(30)
+    driver.set_script_timeout(30)
+    
     return driver
 
 def fetch_data_with_selenium():
@@ -126,6 +142,169 @@ def fetch_data_with_selenium():
             except Exception:
                 # Suppress any errors during cleanup
                 pass
+
+def track_redirect_and_extract_link(driver, initial_url, timeout=30):
+    """
+    Open a URL, track where it redirects, and extract links from the final page.
+    
+    Args:
+        driver: Selenium WebDriver instance
+        initial_url: The URL to start from (e.g., sportfogadas.org)
+        timeout: Maximum time to wait for redirect (default 30 seconds)
+    
+    Returns:
+        dict: {
+            'initial_url': str,
+            'final_url': str,
+            'redirect_chain': list,
+            'extracted_links': list
+        }
+    """
+    result = {
+        'initial_url': initial_url,
+        'final_url': None,
+        'redirect_chain': [],
+        'extracted_links': []
+    }
+    
+    try:
+        print(f"\n[INFO] Opening initial URL: {initial_url}")
+        
+        # Navigate to the initial URL
+        driver.get(initial_url)
+        result['redirect_chain'].append(initial_url)
+        
+        # Wait for page to be fully loaded
+        wait = WebDriverWait(driver, timeout)
+        wait.until(lambda d: d.execute_script('return document.readyState') == 'complete')
+        
+        # Small delay to allow any JavaScript redirects to complete
+        time.sleep(2)
+        
+        # Get the final URL after redirects
+        final_url = driver.current_url
+        result['final_url'] = final_url
+        
+        if final_url != initial_url:
+            result['redirect_chain'].append(final_url)
+            print(f"[INFO] Redirected to: {final_url}")
+        else:
+            print(f"[INFO] No redirect occurred, stayed at: {final_url}")
+        
+        # Extract all links from the final page
+        try:
+            links = driver.find_elements(By.TAG_NAME, 'a')
+            for link in links:
+                href = link.get_attribute('href')
+                if href and href.startswith('http'):
+                    result['extracted_links'].append(href)
+            
+            # Remove duplicates
+            result['extracted_links'] = list(set(result['extracted_links']))
+            print(f"[INFO] Extracted {len(result['extracted_links'])} unique links from the page")
+            
+        except Exception as e:
+            print(f"[WARNING] Could not extract links: {str(e)}")
+        
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] Error tracking redirect: {str(e)}")
+        result['error'] = str(e)
+        return result
+
+def open_sportfogadas_and_track():
+    """
+    Opens sportfogadas.org, tracks redirects, and extracts links.
+    Main function for the sports betting site automation.
+    
+    Returns:
+        dict: Information about the redirect and extracted links
+    """
+    driver = None
+    try:
+        print("\n" + "="*60)
+        print("Opening sportfogadas.org and tracking redirects")
+        print("="*60)
+        
+        driver = setup_undetected_driver()
+        
+        # Track redirect from sportfogadas.org
+        result = track_redirect_and_extract_link(
+            driver, 
+            "https://www.sportfogadas.org",
+            timeout=30
+        )
+        
+        # Display results
+        print("\n[RESULTS]")
+        print(f"  Initial URL: {result['initial_url']}")
+        print(f"  Final URL: {result['final_url']}")
+        print(f"  Redirect chain: {' -> '.join(result['redirect_chain'])}")
+        print(f"  Total links extracted: {len(result['extracted_links'])}")
+        
+        if result['extracted_links']:
+            print(f"\n[SAMPLE LINKS] (first 5):")
+            for link in result['extracted_links'][:5]:
+                print(f"    - {link}")
+        
+        return result
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to open sportfogadas.org: {str(e)}")
+        return {'error': str(e)}
+    finally:
+        if driver:
+            try:
+                print("\n[INFO] Closing browser...")
+                driver.quit()
+            except Exception as e:
+                print(f"[WARNING] Error closing browser: {str(e)}")
+
+def submit_link_to_external_site(driver, target_url, link_to_submit, input_selector=None):
+    """
+    Submit a link to an external website (e.g., mostbet).
+    
+    Args:
+        driver: Selenium WebDriver instance
+        target_url: The URL where to submit (e.g., mostbet page)
+        link_to_submit: The link to submit
+        input_selector: CSS selector for the input field (optional)
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        print(f"\n[INFO] Opening target site: {target_url}")
+        driver.get(target_url)
+        
+        # Wait for page to load
+        wait = WebDriverWait(driver, 20)
+        wait.until(lambda d: d.execute_script('return document.readyState') == 'complete')
+        
+        print(f"[INFO] Successfully loaded: {driver.current_url}")
+        print(f"[INFO] Link to submit: {link_to_submit}")
+        
+        # If input selector is provided, try to find and fill the input
+        if input_selector:
+            try:
+                input_element = wait.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, input_selector))
+                )
+                input_element.clear()
+                input_element.send_keys(link_to_submit)
+                print(f"[SUCCESS] Link submitted to input field")
+                return True
+            except Exception as e:
+                print(f"[WARNING] Could not find input field with selector '{input_selector}': {str(e)}")
+        
+        # If no selector or selector failed, just report success of opening the page
+        print(f"[INFO] Target page opened. Manual submission may be required.")
+        return True
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to submit link: {str(e)}")
+        return False
 
 def fetch_data_from_supabase():
     """Fetch data from Supabase database"""
@@ -162,21 +341,48 @@ def fetch_data_from_supabase():
 
 if __name__ == "__main__":
     try:
-        print("=== Testing Undetected Selenium Driver ===")
-        fetch_data_with_selenium()
+        # Test 1: Track sportfogadas.org redirects
+        print("\n" + "="*70)
+        print("TEST 1: Opening sportfogadas.org and tracking redirects")
+        print("="*70)
+        result = open_sportfogadas_and_track()
         
-        print("\n=== Fetching Data from Supabase ===")
+        # Test 2: Fetch data from Supabase
+        print("\n" + "="*70)
+        print("TEST 2: Fetching Data from Supabase")
+        print("="*70)
         fetch_data_from_supabase()
         
+        # Test 3: Example of submitting a link (commented out by default)
+        # Uncomment and configure when you have a specific target site
+        """
+        if result and result.get('final_url'):
+            driver = setup_undetected_driver()
+            try:
+                submit_link_to_external_site(
+                    driver,
+                    target_url="https://www.mostbet.com",  # Example target
+                    link_to_submit=result['final_url'],
+                    input_selector=None  # Add selector if you know it
+                )
+                time.sleep(3)  # Allow time to see the result
+            finally:
+                driver.quit()
+        """
+        
         # Allow time for proper cleanup
-        print("\nScript completed successfully!")
+        print("\n" + "="*70)
+        print("All tests completed successfully!")
+        print("="*70)
         time.sleep(0.5)
         
     except KeyboardInterrupt:
-        print("\nScript interrupted by user")
+        print("\n[INFO] Script interrupted by user")
         sys.exit(0)
     except Exception as e:
-        print(f"\nUnexpected error: {str(e)}")
+        print(f"\n[ERROR] Unexpected error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
     finally:
         # Ensure clean exit
