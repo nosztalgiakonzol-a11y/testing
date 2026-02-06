@@ -8,6 +8,10 @@ import os
 import subprocess
 import re
 
+# TODO: TEMPORARY HARDCODED KEYS FOR TESTING - WILL BE REMOVED TOMORROW
+SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbnVkZ3l5dnhuY2RjZ2FucHBsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDAzMDk0MywiZXhwIjoyMDc1NjA2OTQzfQ.6mmHZJ2QS3a4TywxZ-lswdcvwPCF5NCYLe6CuiO8-3A"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbnVkZ3l5dnhuY2RjZ2FucHBsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwMzA5NDMsImV4cCI6MjA3NTYwNjk0M30.QhtBEhUYoZU8dukJ2bNcy95bXW7unxln8NPe_13eBQ4"
+
 def get_chrome_version():
     """
     Detect the installed Chrome version.
@@ -124,7 +128,8 @@ def fetch_data_with_selenium():
 def fetch_data_from_supabase():
     """Fetch data from Supabase database"""
     url = os.environ.get('SUPABASE_URL', 'https://sonudgyyvxncdcganppl.supabase.co')
-    key = os.environ.get('SUPABASE_KEY', '******')
+    # TODO: TEMPORARY - Using hardcoded key for testing, will be removed tomorrow
+    key = os.environ.get('SUPABASE_KEY', SUPABASE_SERVICE_KEY)
     
     # Check if valid credentials are provided
     if key == '******':
